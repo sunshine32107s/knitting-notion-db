@@ -49,7 +49,7 @@ export default function Home() {
           {/* 🛠️ 타이틀 글씨 두께를 더 진하게(font-extrabold) 바꾸고 색상을 묵직한 딥블루로 고정했습니다. */}
           <h1 className="text-xl font-extrabold text-sky-950 tracking-tight">고래고래 도안 배달원</h1>
           {/* 🛠️ 부제목도 흐릿한 투명도를 제거하고 font-bold(굵게)로 변경하여 선명도를 높였습니다. */}
-          <p className="text-xs font-bold text-sky-900">도안을 던지면 고래고래가 분석해 배달해요!</p>
+          <p className="text-xs font-bold text-sky-900">고래고래가 열심히 읽어서 배달해 드립니다!</p>
         </div>
 
         <div 
