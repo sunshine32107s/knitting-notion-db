@@ -14,7 +14,7 @@ export default function Home() {
   const handleFileUpload = async (file: File) => {
     setLoading(true);
     setShowNotionBtn(false);
-    setStatusMessage('고래가 코수와 단수를 확인하고 있어요...');
+    setStatusMessage('고래가 코수와 단수를 확인하고 있어요!');
     
     const formData = new FormData();
     formData.append('file', file);
@@ -37,8 +37,8 @@ export default function Home() {
   };
 
   return (
-    // 🛠️ 노션 위젯 내부에서 꽉 차게 보이도록 bg-gradient 배경을 투명(bg-transparent)으로 빼고 패딩을 확 줄였습니다!
-    <div className="w-full min-h-screen p-2 text-gray-900 font-sans tracking-wide flex flex-col items-center justify-center bg-transparent">
+    // 🎨 [배경색 부활!] 원래 웹사이트의 영롱했던 파스텔톤 그라데이션 배경을 다시 주입했습니다!
+    <div className="w-full min-h-screen p-4 text-gray-900 font-sans tracking-wide flex flex-col items-center justify-center bg-gradient-to-tr from-sky-100 via-blue-50 to-emerald-50">
       <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet" />
       <style>{`.custom-cute-font { font-family: 'Gowun Dodum', sans-serif; }`}</style>
 
@@ -54,7 +54,6 @@ export default function Home() {
           onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
           onDragLeave={() => setDragActive(false)}
           onDrop={(e) => { e.preventDefault(); setDragActive(false); if(e.dataTransfer.files?.[0]) handleFileUpload(e.dataTransfer.files[0]); }}
-          // 🛠️ 위젯 크기에 맞게 내부 알맹이 사이즈를 슬림하게 압축했습니다.
           className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all shadow-sm ${
             dragActive ? 'border-sky-400 bg-sky-50/50' : 'border-sky-200 bg-white/90 backdrop-blur-sm hover:border-sky-300'
           }`}
@@ -84,7 +83,7 @@ export default function Home() {
                 href={NOTION_PAGE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-1.5 w-full bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-3 rounded-lg shadow-2.5 transition-all text-xs"
+                className="inline-flex items-center justify-center gap-1.5 w-full bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-3 rounded-lg shadow-sm transition-all text-xs"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
                 새 창으로 표 크게 보기
