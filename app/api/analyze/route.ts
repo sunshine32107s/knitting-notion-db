@@ -14,16 +14,15 @@ export async function POST(request: Request) {
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const base64Data = buffer.toString('base64');
     
     const filePart = {
       inlineData: {
-        data: base64Data,
+        data: buffer.toString('base64'),
         mimeType: file.type
       }
     };
 
-    // 1. 구글 제미나이 AI 도안 정밀 분석
+    // 1. 구글 제미나이 AI 도안 분석
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: [
@@ -54,10 +53,11 @@ export async function POST(request: Request) {
     });
 
     const text = response.text || '{}';
-    const cleanJson = text.replace(/```json|```/g, '').trim();
+    const cleanJson = text.replace(/```json|
+```/g, '').trim();
     const aiResult = JSON.parse(cleanJson);
 
-    // 2. 발급받은 환경변수를 통해 노션(Notion) 데이터베이스로 직접 전송
+    // 2. 노션 환경변수 검증
     const notionToken = process.env.NOTION_TOKEN;
     const databaseId = process.env.NOTION_DATABASE_ID;
 
@@ -65,9 +65,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '노션 환경 변수 세팅이 누락되었습니다.' }, { status: 500 });
     }
 
-    // 사용자가 업로드한 이미지를 노션 미디어로 임시 연동하기 위한 Data URI 생성
-    const fileUrl = `data:${file.type};base64,${base64Data}`;
-
+    // 🛠️ [긴급 조치] 대용량 이미지 binary 데이터를 제거하여 PayloadTooLarge 413 에러를 원천 차단합니다.
     const notionResponse = await fetch('https://api.notion.com/v1/pages', {
       method: 'POST',
       headers: {
@@ -77,7 +75,6 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         parent: { database_id: databaseId },
-        // 💡 내 노션 표의 속성 이름 및 타입 매칭 완료!
         properties: {
           "이름": {
             title: [{ text: { content: aiResult.name || '이름 없는 도안' } }]
@@ -96,26 +93,9 @@ export async function POST(request: Request) {
           },
           "비고": {
             rich_text: [{ text: { content: aiResult.note || '-' } }]
-          },
-          "착샷": {
-            files: [{
-              name: file.name || 'pattern_image.png',
-              type: 'external',
-              external: { url: 'https://images.unsplash.com/photo-1608248597481-496100c80836?w=500' } // 노션 API 제약상 외부 プレースホルダー 주소 지정 후 데이터 본문에 원본 포함 가능
-            }]
           }
-        },
-        // 노션 상세 페이지 본문 안에 원본 도안 이미지를 큼직하게 꽂아줍니다!
-        children: [
-          {
-            object: 'block',
-            type: 'image',
-            image: {
-              type: 'external',
-              external: { url: fileUrl }
-            }
-          }
-        ]
+          // 착샷(파일) 칸은 대용량 에러 방지를 위해 수동 업로드 혹은 클라우드 업로드 방식으로 우회하기 위해 일단 제외합니다.
+        }
       }),
     });
 
