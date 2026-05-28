@@ -1,16 +1,21 @@
 'use client';
 
 import { useState } from 'react';
-import { Upload } from 'lucide-react';
+import { Upload, ExternalLink } from 'lucide-react';
 
 export default function Home() {
   const [loading, setLoading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+  const [showNotionBtn, setShowNotionBtn] = useState(false);
+
+  // 🔗 사용자님의 실제 노션 표 주소 연동 완료!
+  const NOTION_PAGE_URL = "https://app.notion.com/p/2b7e2f78e8bf80c39febc73fce9422dc?v=2b7e2f78e8bf8057ba2f000cb510c490";
 
   const handleFileUpload = async (file: File) => {
     setLoading(true);
-    setStatusMessage('고래가 코수와 단수를 열심히 확인하고 있어요...');
+    setShowNotionBtn(false);
+    setStatusMessage('고래가 코수와 단수를 열심히 확인하고 있어요!');
     
     const formData = new FormData();
     formData.append('file', file);
@@ -23,10 +28,10 @@ export default function Home() {
       
       if (!response.ok) throw new Error('분석 실패');
       
-      // 임시로 성공 메시지만 표시 (추후 노션 연동 완료 시 노션 링크로 바뀔 예정)
-      setStatusMessage('🎉 도안 분석 완료! 내 노션 데이터베이스로 배달을 완료했습니다! 💙');
+      setStatusMessage('🎉 도안 분석 완료! 내 뜨개 서랍장(노션)으로 배달을 완료했습니다! 💙');
+      setShowNotionBtn(true);
     } catch (error) {
-      setStatusMessage('❌ 도안을 읽거나 전송하는 중 오류가 발생했습니다.');
+      setStatusMessage('❌ 도안을 읽거나 노션으로 전송하는 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
@@ -70,9 +75,22 @@ export default function Home() {
           )}
         </div>
 
+        {/* 배달 완료 시 나타나는 메시지 및 바로가기 버튼 */}
         {statusMessage && !loading && (
-          <div className="p-4 bg-white/80 backdrop-blur-sm border border-sky-100 rounded-xl shadow-sm text-sm font-medium text-gray-700 animate-in fade-in duration-300">
-            {statusMessage}
+          <div className="space-y-3 p-5 bg-white/90 backdrop-blur-sm border border-sky-100 rounded-2xl shadow-md text-sm font-medium text-gray-700 animate-in fade-in duration-300">
+            <div>{statusMessage}</div>
+            
+            {showNotionBtn && (
+              <a 
+                href={NOTION_PAGE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex items-center justify-center gap-2 w-full bg-sky-500 hover:bg-sky-600 text-white font-semibold py-3 px-4 rounded-xl shadow-sm transition-all transform hover:-translate-y-0.5 active:translate-y-0 text-sm"
+              >
+                <ExternalLink className="w-4 h-4" />
+                내 뜨개 서랍장 확인하러 가기
+              </a>
+            )}
           </div>
         )}
         
