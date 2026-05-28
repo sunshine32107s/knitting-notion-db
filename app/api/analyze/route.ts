@@ -64,8 +64,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '노션 환경 변수 세팅이 누락되었습니다.' }, { status: 500 });
     }
 
-    // 3. 노션 API를 통해 내 기존 뜨개질 표로 전송
-    const notionResponse = await fetch('[https://api.notion.com/v1/pages](https://api.notion.com/v1/pages)', {
+    // 3. 🛠️ [주소창 완벽 청소] 마크다운 대괄호 찌꺼기를 완벽히 제거한 순수 노션 API 주소입니다.
+    const notionResponse = await fetch('https://api.notion.com/v1/pages', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${notionToken}`,
