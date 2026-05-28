@@ -53,8 +53,7 @@ export async function POST(request: Request) {
     });
 
     const text = response.text || '{}';
-    const cleanJson = text.replace(/```json|
-```/g, '').trim();
+    const cleanJson = text.replace(/```json|```/g, '').trim();
     const aiResult = JSON.parse(cleanJson);
 
     // 2. 노션 환경변수 검증
@@ -65,8 +64,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '노션 환경 변수 세팅이 누락되었습니다.' }, { status: 500 });
     }
 
-    // 🛠️ [긴급 조치] 대용량 이미지 binary 데이터를 제거하여 PayloadTooLarge 413 에러를 원천 차단합니다.
-    const notionResponse = await fetch('https://api.notion.com/v1/pages', {
+    // 3. 노션 API를 통해 내 기존 뜨개질 표로 전송
+    const notionResponse = await fetch('[https://api.notion.com/v1/pages](https://api.notion.com/v1/pages)', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${notionToken}`,
@@ -94,7 +93,6 @@ export async function POST(request: Request) {
           "비고": {
             rich_text: [{ text: { content: aiResult.note || '-' } }]
           }
-          // 착샷(파일) 칸은 대용량 에러 방지를 위해 수동 업로드 혹은 클라우드 업로드 방식으로 우회하기 위해 일단 제외합니다.
         }
       }),
     });
