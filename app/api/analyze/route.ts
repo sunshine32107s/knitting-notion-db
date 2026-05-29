@@ -91,7 +91,7 @@ export async function POST(request: Request) {
           "원작 실 성분": {
             rich_text: [{ text: { content: aiResult.yarnComponent || '-' } }]
           },
-          "비고": {
+          "특징": {
             rich_text: [{ text: { content: aiResult.note || '-' } }]
           }
         }
