@@ -61,7 +61,7 @@ export async function POST(request: Request) {
 
     // 2. 노션 환경변수 검증
     const notionToken = process.env.NOTION_TOKEN;
-    const databaseId = process.env.NOTION_DATABASE_ID;
+    const databaseId = "2b7e2f78e8bf8068b319000b82494d33";
 
     if (!notionToken || !databaseId) {
       return NextResponse.json({ error: '노션 환경 변수 세팅이 누락되었습니다.' }, { status: 500 });
