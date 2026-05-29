@@ -85,14 +85,14 @@ export async function POST(request: Request) {
           "종류": {
             select: { name: aiResult.type || '기타' }
           },
+           "특징": {
+            rich_text: [{ text: { content: aiResult.note || '-' } }]
+          },
           "원작 실": {
             rich_text: [{ text: { content: aiResult.yarn || '-' } }]
           },
           "원작 실 성분": {
             rich_text: [{ text: { content: aiResult.yarnComponent || '-' } }]
-          },
-          "특징": {
-            rich_text: [{ text: { content: aiResult.note || '-' } }]
           }
         }
       }),
