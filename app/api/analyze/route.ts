@@ -22,10 +22,9 @@ export async function POST(request: Request) {
       }
     };
 
-    // 1. 구글 제미나이 AI 도안 분석 (JSON 출력 강제 설정 추가)
+    // 1. 구글 제미나이 AI 도안 분석
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
-      // config를 통해 응답 포맷을 JSON으로 고정합니다.
       config: {
         responseMimeType: "application/json"
       },
@@ -58,7 +57,7 @@ export async function POST(request: Request) {
     });
 
     const text = response.text || '{}';
-    const aiResult = JSON.parse(text); // 형식을 강제했으므로 replace 없이 바로 파싱 가능합니다.
+    const aiResult = JSON.parse(text);
 
     // 2. 노션 환경변수 검증
     const notionToken = process.env.NOTION_TOKEN;
@@ -68,16 +67,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '노션 환경 변수 세팅이 누락되었습니다.' }, { status: 500 });
     }
 
-    // AI가 뜬금없는 종류를 보냈을 때 노션 에러를 방지하기 위한 안전장치
+    // 최신 API 버전(2022-06-28 이후)에서는 없는 선택(Select) 값을 넣으면 에러가 납니다.
+    // 도안 종류가 지정된 6개 외의 값이 오면 에러가 나지 않도록 처리합니다.
     const allowedTypes = ["스웨터", "대바늘 소품", "조끼", "가디건", "치우❤️", "코바늘"];
-    const verifiedType = allowedTypes.includes(aiResult.type) ? aiResult.type : '가디건'; // 기본값 가디건 혹은 노션에 존재하는 기본 태그로 지정
+    const verifiedType = allowedTypes.includes(aiResult.type) ? aiResult.type : null;
 
-    // 3. 노션 API 전송
-    const notionResponse = await fetch('[https://api.notion.com/v1/pages](https://api.notion.com/v1/pages)', {
+    // 3. 노션 API 전송 (헤더 버전을 최신으로 수정)
+    const notionResponse = await fetch('https://api.notion.com/v1/pages', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${notionToken}`,
-        'Notion-Version': '2026-03-31',
+        'Notion-Version': '2026-03-31', // 👈 최신 API 버전 적용
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -89,9 +89,12 @@ export async function POST(request: Request) {
           "게이지": {
             rich_text: [{ text: { content: aiResult.gauge || '0' } }]
           },
-          "종류": {
-            select: { name: verifiedType }
-          },
+          // 종류가 일치하지 않으면 아예 비워두어 에러를 방지합니다.
+          ...(verifiedType && {
+            "종류": {
+              select: { name: verifiedType }
+            }
+          }),
           "특징": {
             rich_text: [{ text: { content: aiResult.note || '-' } }]
           },
@@ -107,7 +110,7 @@ export async function POST(request: Request) {
 
     if (!notionResponse.ok) {
       const errorData = await notionResponse.json();
-      console.error('노션 API 전송 실패 상세 원인:', JSON.stringify(errorData, null, 2));
+      console.error('노션 API 전송 실패:', errorData);
       return NextResponse.json({ error: '노션 전송 실패', details: errorData.message }, { status: 500 });
     }
 
