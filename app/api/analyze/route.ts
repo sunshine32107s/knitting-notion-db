@@ -77,7 +77,7 @@ export async function POST(request: Request) {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${notionToken}`,
-        'Notion-Version': '2026-03-31', // 👈 최신 API 버전 적용
+        'Notion-Version': '2026-03-11', // 👈 최신 API 버전 적용
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
