@@ -24,7 +24,7 @@ export async function POST(request: Request) {
 
     // 1. 구글 제미나이 AI 도안 분석
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.5-pro',
       config: {
         responseMimeType: "application/json"
       },
