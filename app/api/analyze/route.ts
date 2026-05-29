@@ -22,9 +22,13 @@ export async function POST(request: Request) {
       }
     };
 
-    // 1. 구글 제미나이 AI 도안 분석
+    // 1. 구글 제미나이 AI 도안 분석 (JSON 출력 강제 설정 추가)
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
+      // config를 통해 응답 포맷을 JSON으로 고정합니다.
+      config: {
+        responseMimeType: "application/json"
+      },
       contents: [
         filePart,
         `당신은 뜨개질 도안 전문 분석가입니다. 첨부된 파일(이미지 또는 PDF)을 분석하여 아래 JSON 구조로 응답해주세요.
@@ -33,15 +37,15 @@ export async function POST(request: Request) {
         - '코', '단', 'sts', 'rows' 같은 문자는 무조건 제외하고 "오직 숫자와 파란하트(💙) 기호"만 넣으세요. 숫자와 기호 사이에 공백(띄어쓰기)은 절대 넣지 마세요. (예: 22💙30)
         - 게이지 정보가 전혀 발견되지 않는다면 무조건 숫자 '0' 하나만 적으세요.
 
-[종류(type) 규칙]:
-- 의류의 종류는 반드시 아래 제공된 6개의 단어 중 도안과 가장 일치하는 딱 '하나'만 선택해서 대답해야 합니다. 새로운 단어를 임의로 만들어내면 절대 안 됩니다.
-- 허용된 종류 목록: ["스웨터", "대바늘 소품", "조끼", "가디건", "치우❤️", "코바늘"]
+        [종류(type) 규칙]:
+        - 의류의 종류는 반드시 아래 제공된 6개의 단어 중 도안과 가장 일치하는 딱 '하나'만 선택해서 대답해야 합니다. 새로운 단어를 임의로 만들어내면 절대 안 됩니다.
+        - 허용된 종류 목록: ["스웨터", "대바늘 소품", "조끼", "가디건", "치우❤️", "코바늘"]
 
         [영어 도안 판별 및 특징(note) 규칙 - 슬래시(/) 필수]:
         - 분석 중인 도안이 '영어'로 작성된 도안인지 확인하세요. 영어 도안인 경우, 'note' 칸의 가장 첫머리에 반드시 "영어" 단어를 넣으세요.
         - 특징 항목들을 나열할 때는 쉼표(,)를 절대로 사용하지 말고 슬래시 기호( / )로 구분해 주세요. (예: "영어 / 4mm 바늘 사용 / 탑다운 구조")
 
-        응답 형식(마크다운 태그 없이 순수 JSON만 응답):
+        응답 형식:
         {
           "name": "도안 이름",
           "gauge": "22💙30 형식의 공백 없는 순수 숫자와 하트 조합",
@@ -54,8 +58,7 @@ export async function POST(request: Request) {
     });
 
     const text = response.text || '{}';
-    const cleanJson = text.replace(/```json|```/g, '').trim();
-    const aiResult = JSON.parse(cleanJson);
+    const aiResult = JSON.parse(text); // 형식을 강제했으므로 replace 없이 바로 파싱 가능합니다.
 
     // 2. 노션 환경변수 검증
     const notionToken = process.env.NOTION_TOKEN;
@@ -65,8 +68,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '노션 환경 변수 세팅이 누락되었습니다.' }, { status: 500 });
     }
 
-    // 3. 🛠️ [주소창 완벽 청소] 마크다운 대괄호 찌꺼기를 완벽히 제거한 순수 노션 API 주소입니다.
-    const notionResponse = await fetch('https://api.notion.com/v1/pages', {
+    // AI가 뜬금없는 종류를 보냈을 때 노션 에러를 방지하기 위한 안전장치
+    const allowedTypes = ["스웨터", "대바늘 소품", "조끼", "가디건", "치우❤️", "코바늘"];
+    const verifiedType = allowedTypes.includes(aiResult.type) ? aiResult.type : '가디건'; // 기본값 가디건 혹은 노션에 존재하는 기본 태그로 지정
+
+    // 3. 노션 API 전송
+    const notionResponse = await fetch('[https://api.notion.com/v1/pages](https://api.notion.com/v1/pages)', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${notionToken}`,
@@ -83,9 +90,9 @@ export async function POST(request: Request) {
             rich_text: [{ text: { content: aiResult.gauge || '0' } }]
           },
           "종류": {
-            select: { name: aiResult.type || '기타' }
+            select: { name: verifiedType }
           },
-           "특징": {
+          "특징": {
             rich_text: [{ text: { content: aiResult.note || '-' } }]
           },
           "원작 실": {
@@ -100,7 +107,7 @@ export async function POST(request: Request) {
 
     if (!notionResponse.ok) {
       const errorData = await notionResponse.json();
-      console.error('노션 API 전송 실패:', errorData);
+      console.error('노션 API 전송 실패 상세 원인:', JSON.stringify(errorData, null, 2));
       return NextResponse.json({ error: '노션 전송 실패', details: errorData.message }, { status: 500 });
     }
 
