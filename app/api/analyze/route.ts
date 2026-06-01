@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
-import { PrismaClient } from '@prisma/client';
 
+// 🟢 프리즈마(Prisma) 관련 코드 완전 제거 완료!
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const prisma = new PrismaClient(); // 내 로컬 DB 호환 유지
 
 export async function POST(request: Request) {
   try {
@@ -68,19 +67,7 @@ export async function POST(request: Request) {
     const cleanJson = text.replace(/```json|```/g, '').trim();
     const aiResult = JSON.parse(cleanJson);
 
-    // 2. 내 데이터베이스(Prisma)에 영구 저장 (껐다 켜도 살아있게 함)
-    const savedData = await prisma.pattern.create({
-      data: {
-        name: aiResult.name || '이름 없는 도안',
-        gauge: aiResult.gauge || '0',
-        type: aiResult.type || '기타',
-        yarn: aiResult.yarn || '-',
-        yarnComponent: aiResult.yarnComponent || '-',
-        note: aiResult.note || '-'
-      }
-    });
-
-    // 3. 노션 환경변수 검증
+    // 2. 노션 환경변수 검증
     const notionToken = process.env.NOTION_TOKEN;
     const databaseId = process.env.NOTION_DATABASE_ID;
 
@@ -88,18 +75,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '노션 환경 변수 세팅이 누락되었습니다.' }, { status: 400 });
     }
 
-    // 4. 🚚 노션 API 배달원을 통해 내 노션 표로 전송
+    // 3. 🚚 노션 API 배달원을 통해 내 노션 표(독서DB 템플릿)로 즉시 직송!
     const notionResponse = await fetch('https://api.notion.com/v1/pages', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${notionToken}`,
-        'Notion-Version': '2022-06-28', // 🟢 호환성이 가장 높은 버전으로 안정화
+        'Notion-Version': '2022-06-28', // 안정적인 노션 API 버전
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         parent: { database_id: databaseId },
         properties: {
-          // ⚠️ 여기서 노션 표 제목에 맞게 따옴표 안의 단어들을 꼭 수정해 주세요!
+          // ⚠️ 내 노션 '독서DB' 표의 실제 열 제목과 일치하는지 꼭 확인하세요!
           "이름": { 
             title: [{ text: { content: aiResult.name || '이름 없는 도안' } }]
           },
@@ -128,7 +115,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '노션 전송 실패', details: errorData.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data: savedData });
+    // 노션 전송 성공 시 화면에 성공 결과 반환
+    return NextResponse.json({ success: true, data: aiResult });
 
   } catch (error: any) {
     console.error('시스템 에러:', error);
