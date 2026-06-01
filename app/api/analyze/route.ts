@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 
-// 환경변수에서 키를 안전하게 가져옵니다.
+// 환경변수에서 키를 가져옵니다.
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export async function POST(request: Request) {
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       }
     };
 
-    // 🟢 [503 에러 원인 해결] 구글 제미나이 호출 및 검색 툴 정석 세팅
+    // 🟢 [503 에러 완전 차단] 과부하 걸린 구글 검색(tools) 설정을 아예 제거했습니다.
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: [
@@ -40,9 +40,8 @@ export async function POST(request: Request) {
         - 허용된 종류 목록: ["스웨터", "대바늘 소품", "조끼", "가디건", "치우❤️", "코바늘", "기타"]
 
         [원작 실 성분(yarnComponent) 및 비율 정렬 규칙]:
-        - 도안에 실 성분이 없더라도 인터넷에서 해당 원작 실의 성분을 검색하여 반드시 찾아내세요.
-        - 찾아낸 실 성분을 적을 때는 반드시 성분 비율(%)이 높은 순서대로 내림차순 정렬하여 한글로 깔끔하게 나열해 주세요. (예: "울 70% / 아크릴 20% / 나일론 10%")
-        - 도저히 찾을 수 없는 희귀 사설 실인 경우에만 "-"라고 적으세요.
+        - 첨부된 도안 텍스트 내에 적혀 있는 원작 실의 성분 정보를 찾아서 성분 비율(%)이 높은 순서대로 내림차순 정렬하여 한글로 깔끔하게 나열해 주세요. (예: "울 70% / 아크릴 20% / 나일론 10%")
+        - 도안 자체에 실 성분 비율이 명시되어 있지 않다면 무조건 "-"라고 적으세요.
 
         [영어 도안 판별 및 특징(note) 규칙 - 슬래시(/) 필수]:
         - 분석 중인 도안이 '영어'로 작성된 도안인지 확인하세요. 영어 도안인 경우, 'note' 칸의 가장 첫머리에 반드시 "영어" 단어를 넣으세요.
@@ -57,11 +56,8 @@ export async function POST(request: Request) {
           "yarnComponent": "실의 성분 정보",
           "note": "항목들을 쉼표가 아닌 ' / '로 구분한 핵심 특이사항 요약"
         }`
-      ],
-      config: {
-        // @google/genai 공식 문서에 따른 올바른 구글 검색(Grounded Search) 활성화 문법입니다.
-        tools: [{ googleSearch: {} }]
-      }
+      ]
+      // 🟢 여기에 있던 config와 tools 설정을 완전히 삭제하여 구글 일반 차선으로 우회합니다.
     });
 
     const text = response.text || '{}';
@@ -86,7 +82,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '노션 환경 변수 세팅이 누락되었습니다.' }, { status: 400 });
     }
 
-    // 🚚 진짜 새로 만든 노션 원본 표로 데이터 배달
+    // 🚚 새로 만든 깨끗한 노션 원본 표로 즉시 배달
     const notionResponse = await fetch('https://api.notion.com/v1/pages', {
       method: 'POST',
       headers: {
