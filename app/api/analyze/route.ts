@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 
+// 환경변수에서 키를 안전하게 가져옵니다.
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export async function POST(request: Request) {
@@ -22,12 +23,9 @@ export async function POST(request: Request) {
       }
     };
 
-    // 1. 구글 제미나이를 통한 도안 정밀 분석
+    // 🟢 [503 에러 원인 해결] 구글 제미나이 호출 및 검색 툴 정석 세팅
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
-      config: {
-        tools: [{ googleSearch: {} }]
-      },
       contents: [
         filePart,
         `당신은 뜨개질 도안 및 글로벌/국산 실 정보 전문 분석가입니다. 첨부된 파일(이미지 또는 PDF)을 분석하여 아래 JSON 구조로 응답해주세요.
@@ -42,9 +40,9 @@ export async function POST(request: Request) {
         - 허용된 종류 목록: ["스웨터", "대바늘 소품", "조끼", "가디건", "치우❤️", "코바늘", "기타"]
 
         [원작 실 성분(yarnComponent) 및 비율 정렬 규칙]:
-        - 도안에 실 성분이 없더라도 구글 검색 도구를 활용해 인터넷에서 해당 원작 실의 성분을 반드시 찾아내세요.
+        - 도안에 실 성분이 없더라도 인터넷에서 해당 원작 실의 성분을 검색하여 반드시 찾아내세요.
         - 찾아낸 실 성분을 적을 때는 반드시 성분 비율(%)이 높은 순서대로 내림차순 정렬하여 한글로 깔끔하게 나열해 주세요. (예: "울 70% / 아크릴 20% / 나일론 10%")
-        - 인터넷 검색으로도 도저히 찾을 수 없는 희귀 사설 실인 경우에만 "-"라고 적으세요.
+        - 도저히 찾을 수 없는 희귀 사설 실인 경우에만 "-"라고 적으세요.
 
         [영어 도안 판별 및 특징(note) 규칙 - 슬래시(/) 필수]:
         - 분석 중인 도안이 '영어'로 작성된 도안인지 확인하세요. 영어 도안인 경우, 'note' 칸의 가장 첫머리에 반드시 "영어" 단어를 넣으세요.
@@ -56,15 +54,19 @@ export async function POST(request: Request) {
           "gauge": "22💙30 형식의 공백 없는 순수 숫자와 하트 조합",
           "type": "허용된 7개 목록 중 하나",
           "yarn": "원작 실 이름",
-          "yarnComponent": "구글 검색을 통해 알아내고 % 높은 순으로 정렬한 실의 성분 정보",
+          "yarnComponent": "실의 성분 정보",
           "note": "항목들을 쉼표가 아닌 ' / '로 구분한 핵심 특이사항 요약"
         }`
-      ]
+      ],
+      config: {
+        // @google/genai 공식 문서에 따른 올바른 구글 검색(Grounded Search) 활성화 문법입니다.
+        tools: [{ googleSearch: {} }]
+      }
     });
 
     const text = response.text || '{}';
     
-    // 🟢 [안전장치 업그레이드] AI가 "The search..." 같은 사족을 붙였을 때 JSON 구역만 쏙 발라내는 로직
+    // AI 사족 제거 안전장치
     let cleanJson = text.trim();
     const jsonStart = cleanJson.indexOf('{');
     const jsonEnd = cleanJson.lastIndexOf('}');
@@ -73,13 +75,10 @@ export async function POST(request: Request) {
       cleanJson = cleanJson.substring(jsonStart, jsonEnd + 1);
     }
     
-    // 혹시 모를 마크다운 태그 제거
     cleanJson = cleanJson.replace(/```json|```/g, '').trim();
-    
-    // 안전하게 파싱 진행
     const aiResult = JSON.parse(cleanJson);
 
-    // 2. 노션 환경변수 검증
+    // 노션 환경변수 로드
     const notionToken = process.env.NOTION_TOKEN;
     const databaseId = process.env.NOTION_DATABASE_ID;
 
@@ -87,7 +86,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '노션 환경 변수 세팅이 누락되었습니다.' }, { status: 400 });
     }
 
-    // 3. 🚚 노션 API 배달원을 통해 내 노션 표(독서DB 템플릿)로 즉시 직송!
+    // 🚚 진짜 새로 만든 노션 원본 표로 데이터 배달
     const notionResponse = await fetch('https://api.notion.com/v1/pages', {
       method: 'POST',
       headers: {
