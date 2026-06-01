@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 
-// 🟢 프리즈마(Prisma) 관련 코드 완전 제거 완료!    
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export async function POST(request: Request) {
@@ -51,7 +50,7 @@ export async function POST(request: Request) {
         - 분석 중인 도안이 '영어'로 작성된 도안인지 확인하세요. 영어 도안인 경우, 'note' 칸의 가장 첫머리에 반드시 "영어" 단어를 넣으세요.
         - 특징 항목들을 나열할 때는 쉼표(,)를 절대로 사용하지 말고 슬래시 기호( / )로 구분해 주세요. (예: "영어 / 4mm 바늘 사용 / 탑다운 구조")
 
-        응답 형식(마크다운 태그 없이 순수 JSON만 응답):
+        응답 형식(마크다운 태그 없이 오직 아래 구조의 JSON 데이터만 대답하고, 다른 설명이나 주석은 절대 붙이지 마세요):
         {
           "name": "도안 이름",
           "gauge": "22💙30 형식의 공백 없는 순수 숫자와 하트 조합",
@@ -64,7 +63,20 @@ export async function POST(request: Request) {
     });
 
     const text = response.text || '{}';
-    const cleanJson = text.replace(/```json|```/g, '').trim();
+    
+    // 🟢 [안전장치 업그레이드] AI가 "The search..." 같은 사족을 붙였을 때 JSON 구역만 쏙 발라내는 로직
+    let cleanJson = text.trim();
+    const jsonStart = cleanJson.indexOf('{');
+    const jsonEnd = cleanJson.lastIndexOf('}');
+    
+    if (jsonStart !== -1 && jsonEnd !== -1) {
+      cleanJson = cleanJson.substring(jsonStart, jsonEnd + 1);
+    }
+    
+    // 혹시 모를 마크다운 태그 제거
+    cleanJson = cleanJson.replace(/```json|```/g, '').trim();
+    
+    // 안전하게 파싱 진행
     const aiResult = JSON.parse(cleanJson);
 
     // 2. 노션 환경변수 검증
@@ -80,13 +92,12 @@ export async function POST(request: Request) {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${notionToken}`,
-        'Notion-Version': '2022-06-28', // 안정적인 노션 API 버전
+        'Notion-Version': '2022-06-28',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         parent: { database_id: databaseId },
         properties: {
-          // ⚠️ 내 노션 '독서DB' 표의 실제 열 제목과 일치하는지 꼭 확인하세요!
           "이름": { 
             title: [{ text: { content: aiResult.name || '이름 없는 도안' } }]
           },
@@ -115,7 +126,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '노션 전송 실패', details: errorData.message }, { status: 500 });
     }
 
-    // 노션 전송 성공 시 화면에 성공 결과 반환
     return NextResponse.json({ success: true, data: aiResult });
 
   } catch (error: any) {
