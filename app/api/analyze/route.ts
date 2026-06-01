@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 
-// 🟢 프리즈마(Prisma) 관련 코드 완전 제거 완료!
+// 🟢 프리즈마(Prisma) 관련 코드 완전 제거 완료!    
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export async function POST(request: Request) {
